@@ -24,24 +24,8 @@ var supportedCurrencies = null;
 var spCurrencyCheck = null;
 
 bot.hear(/spcheck (.*)/i,(payload, chat, data) => {
-  
   spCheckCoin = data.match[1];
-  checkSpCoin(spCheckCoin);
-
-  const simplePrice = `https://api.coingecko.com/api/v3/simple/price?ids=${spCheckCoin}&vs_currencies=${currency}&include_market_cap=true&include_24hr_vol=true&include_24hr_change=true&include_last_updated_at=true`
-    fetch(simplePrice).then(res => res.json()).then(json => {
-      //console.log(json);
-      if(isEmpty(json) == true) {
-        chat.say("Something went wrong pls try again")
-      } else {
-        var price = json[`${spCheckCoin}`][`${currency}`];
-        var marketCap = json[`${spCheckCoin}`][`${currency}_market_cap`];
-        var vol24h = json[`${spCheckCoin}`][`${currency}_24h_vol`];
-        var change24h = json[`${spCheckCoin}`][`${currency}_24h_change`];
-        var lastUpdatedAt = convertUnixToTime(json[`${spCheckCoin}`].last_updated_at);
-        chat.say(`Price: ${price} \nMarket cap: ${marketCap}\n24h volume: ${vol24h}\n24h change: ${change24h}\nLast updated: ${lastUpdatedAt}`);
-      }
-    })
+  checkSpCoin(spCheckCoin).then(result => chat.say(result))
 });
 
 // payload = obsah chatu; chat == konkretni chat
@@ -53,13 +37,7 @@ bot.on('message', (payload, chat) => {
 bot.setGreetingText('Hey there! Welcome to Cryptocheck!');
 
 bot.setGetStartedButton((payload, chat) => {
-  chat.say({
-    text: 'Welcome to Cryptocheck. What are you looking for?',
-    buttons: [
-      { type: 'postback', title: 'Crypto price check', payload: 'CHECK_CRYPTOCURRENCY' },
-      { type: 'postback', title: 'Set currentcy', payload: 'SET_CURRENCY' }
-    ]
-  });
+  propMenu(chat,true);
 });
 
 bot.on('postback:SET_CURRENCY', (payload, chat) => {
@@ -103,8 +81,29 @@ bot.hear(/set_cur (.*)/i,(payload, chat, data) => {
   //console.log(currency);
 });
 
+bot.hear(['try'], (payload, chat) => {
+
+  fetch(supportedCoins).then(res => res.json()).then(json => {
+
+     var x;
+     var i = 0;
+     for (x in json) {
+      if(json[x].id == 'timers') {
+        console.log(true)
+        console.log(x)
+      }
+     }
+    
+  });
+
+});
+
 bot.hear(['---'], (payload, chat) => {
 
+});
+
+bot.hear(['menu'], (payload, chat) => {
+  propMenu(chat,false)
 });
 
 bot.hear(['setting'], (payload, chat) => {
@@ -122,10 +121,11 @@ bot.hear(/coin (.*)/i,(payload, chat, data) => {
     const coinName = data.match[1].toLowerCase().replace(/ /g, "-");
    
     fetch(searchCoin + coinName).then(res => res.json()).then(json => {
+     
       if (json.error == 'Could not find coin with the given id'){
         chat.say("Something went wrong pls try again")
       } else {
-        chat.say(`ID: ${json.id}\nSymbol: ${json.symbol}\nName: ${json.name}\nPrice: ${json.market_data.current_price[`${currency}`]} ${currency.toUpperCase()}`)
+        chat.say(`ID: ${json.id}\nSymbol: ${json.symbol}\nName: ${json.name}\nPrice:${json.market_data.current_price[`${currency}`]} ${currency.toUpperCase()}`)
       };
     });
 
@@ -136,10 +136,11 @@ function setCurrencyName (isSupported,currencyName,chat){
   if (isSupported){
     currency = currencyName;
     chat.say(`You selected ${currency} as your default currency`)
+    propMenu(chat,false);
   } else {
-    chat.say('Something went wrong')
+    chat.say('Something went wrong.')
   }
-  console.log(isSupported,currencyName);
+  //console.log(isSupported,currencyName);
 }
 
 function fetchingCurrency () {
@@ -167,7 +168,46 @@ function convertUnixToTime(timestamp) {
   return time;
 }
 
-function checkSpCoin (coin) {
+function propMenu(chat, gettingStarted) {
+  let textForMenu = ""
+  if(gettingStarted) {
+    textForMenu = 'Welcome to Cryptocheck. What are you looking for?';
+  } else {
+    textForMenu = 'Menu:'
+  }
+  chat.say({
+    text: textForMenu,
+    buttons: [
+      { type: 'postback', title: 'Price check', payload: 'CHECK_CRYPTOCURRENCY' },
+      { type: 'postback', title: 'Crypto price check', payload: 'CHECK_CRYPTOCURRENCY' },
+      { type: 'postback', title: 'Set currentcy', payload: 'SET_CURRENCY' }
+    ]
+  });
+}
+
+async function checkSpCoin (coin) {
+
+  const simplePrice = `https://api.coingecko.com/api/v3/simple/price?ids=${coin}&vs_currencies=${currency}&include_market_cap=true&include_24hr_vol=true&include_24hr_change=true&include_last_updated_at=true`
+  let response = await fetch(simplePrice);
+  response = await response.json();
+  let text = "";
+  if(isEmpty(response) == true) {
+
+    text = "Something went wrong pls try again"
+
+  } else {
+
+    var price = response[`${spCheckCoin}`][`${currency}`];
+    var marketCap = response[`${spCheckCoin}`][`${currency}_market_cap`];
+    var vol24h = response[`${spCheckCoin}`][`${currency}_24h_vol`];
+    var change24h = response[`${spCheckCoin}`][`${currency}_24h_change`];
+    var lastUpdatedAt = convertUnixToTime(response[`${spCheckCoin}`].last_updated_at);
+    text = `Price: ${price} \nMarket cap: ${marketCap}\n24h volume: ${vol24h}\n24h change: ${change24h}\nLast updated: ${lastUpdatedAt}`;
+
+  }
+  return text;
+  
+  
  
 };
 bot.start(port);
