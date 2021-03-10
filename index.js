@@ -15,6 +15,7 @@ const bot = new BootBot({
 
 // variable
 var currency = 'usd';
+var currency2 = 'usd';
 
 bot.hear(/qcheck (.*)/i,(payload, chat, data) => {
   isSupported(data.match[1]).then(result => {
