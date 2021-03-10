@@ -89,16 +89,14 @@ bot.hear(/dcheck (.*)/i,(payload, chat, data) => {
     isSupported(data.match[1]).then(result => {
       if (result == true) {
         checkDCoin(coinName).then(result => {
-          var array = []
-          var text;
+       
+          var text = "";
            for (i = 0; i < result[0].length; i++) {
-            array.push(`${result[0][i]}\n${result[1][i]}\n`);
-            text += `${result[0][i]}\n${result[1][i]}\n`
+            text += `${result[0][i]} ${result[1][i]}\n`
+           
           }
-          for (i = 0; i < array.length; i++) {
-            chat.say(array[i]);
-          }
-          console.log(text)
+          
+          chat.say(text)
         })
         } else {
          chat.say(`Coin ${coinName} is not supported.`)
@@ -106,6 +104,7 @@ bot.hear(/dcheck (.*)/i,(payload, chat, data) => {
 
       }) 
 });
+
 
 function propMenu(chat, gettingStarted) {
   let textForMenu;
@@ -193,8 +192,9 @@ async function checkDCoin (coin) {
     price1yPchange = `${response.market_data.price_change_percentage_1y_in_currency[`${currency}`]} %`
   ]
   var arrayName = ["Name:","Price:","All-time high:","Change from all-time high:","All-time low:","Change from all-time low:","Traded volume:","24-High:","24-Low:"
-  ,"24H change:","1H %-change:","24H %-change:","7D %-change:","14D %-change:","30D %-change:","1Y %-change:"]
- 
+  ,"24H change:","1H %-change:","24H %-change:","7D %-change:","14D %-change:","30D %-change:","1Y %-change:"];
+  
+
   var finalArray = [arrayName,arrayInfo]
   return finalArray
   
@@ -211,5 +211,5 @@ async function checkSpCoin (coin) {
   var lastUpdatedAt = convertUnixToTime(response[`${coin}`].last_updated_at);
   let text = `Price: ${price} ${currency.toUpperCase()}\nMarket cap: ${marketCap}\n24h volume: ${vol24h}\n24h change: ${change24h}\nLast updated: ${lastUpdatedAt}`;
   return text;
-};
+}
 bot.start(port);
