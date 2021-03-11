@@ -15,7 +15,8 @@ const bot = new BootBot({
 
 // variable
 var currency = 'usd';
-var currency2 = 'usd';
+var watchedPercent = 5;
+
 
 bot.hear(/qcheck (.*)/i,(payload, chat, data) => {
   isSupported(data.match[1]).then(result => {
@@ -44,8 +45,23 @@ bot.on('postback:SET_CURRENCY', (payload, chat) => {
   chat.say('Pls write "setcur" and then your wanted currency for example( czk, usd, eur, btc, eth, etc.) '); 
 });
 
+
+bot.on('postback:SET_PERCENT', (payload, chat) => {
+  chat.say(`The current percent is "${watchedPercent}" %`);
+  chat.say('Pls write "setper" and then your wanted currency for example( czk, usd, eur, btc, eth, etc.) '); 
+});
+
 bot.on('postback:Q_CHECK', (payload,chat) => {
   chat.say('Pls type "qcheck + the cryptocurrency that you want to check.\nExample: coin bitcoin, coin cardano, etc...')
+})
+
+bot.on('postback:PC_CHECK', (payload,chat) => {
+  checkPriceChange(currency,watchedPercent).then(result => {
+    chat.say(result);
+  });
+})
+bot.on('postback:SETTING', (payload,chat) => {
+  propSetting(chat)
 })
 
 bot.on('postback:D_CHECK', (payload,chat) => {
@@ -65,6 +81,22 @@ bot.hear(/setcur (.*)/i,(payload, chat, data) => {
     }
   })
 });
+bot.hear(/setper (.*)/i, (payload, chat, data) => {
+  
+  var x = parseInt(data.match[1],10)
+  if (Number.isInteger(x)) { 
+    watchedPercent = x;
+    chat.say(`Change percent to ${watchedPercent}%`)
+  }
+   
+  else { chat.say(`${data.match[1]} is not a number.`)}
+   
+});
+
+bot.hear(['try'], (payload, chat) => {
+  
+  })
+  
 
 bot.hear(['---'], (payload, chat) => {
 
@@ -79,6 +111,7 @@ bot.hear(['setting'], (payload, chat) => {
     text: 'What do you need help with?',
     buttons: [
       { type: 'postback', title: 'Set currentcy', payload: 'SET_CURRENCY' },
+      { type: 'postback', title: 'Set percent', payload: 'SET_PERCENT' }
     ]
   });
 });
@@ -96,7 +129,6 @@ bot.hear(/dcheck (.*)/i,(payload, chat, data) => {
             text += `${result[0][i]} ${result[1][i]}\n`
            
           }
-          
           chat.say(text)
         })
         } else {
@@ -117,9 +149,21 @@ function propMenu(chat, gettingStarted) {
   chat.say({
     text: textForMenu,
     buttons: [
-      { type: 'postback', title: 'Quick check', payload: 'Q_CHECK' },
+      
       { type: 'postback', title: 'Detailed check', payload: 'D_CHECK' },
-      { type: 'postback', title: 'Set currentcy', payload: 'SET_CURRENCY' }
+      { type: 'postback', title: 'Check price change', payload: 'PC_CHECK' },
+      { type: 'postback', title: 'Setting', payload: 'SETTING' }
+    
+    ]
+  });
+}
+
+function propSetting(chat) {
+  chat.say({
+    text: 'Setting',
+    buttons: [
+      { type: 'postback', title: 'Set currency', payload: 'SET_CURRENCY' },
+      { type: 'postback', title: 'Set percent', payload: 'SET_PERCENT' }
     ]
   });
 }
@@ -136,6 +180,43 @@ function convertUnixToTime(timestamp) {
   var sec = a.getSeconds();
   var time = date + '/' + month + '/' + year + ' ' + hour + ':' + min + ':' + sec ;
   return time;
+}
+async function checkPriceChange (currency,vauleP) {
+  const link = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=${currency}&order=market_cap_desc&per_page=250&page=1&sparkline=false&price_change_percentage=1h`
+  let response = await fetch(link);
+  response = await response.json();
+  var arrayMain = [];
+  var x;
+  for (x in response) {
+    if(response[x].price_change_percentage_1h_in_currency >= vauleP){
+        arrayMain.push([
+          response[x].name,
+          response[x].current_price,
+          response[x].price_change_percentage_1h_in_currency
+        ]);
+    }
+  }
+  arrayMain.sort(function(a, b) {
+    var valueA, valueB;
+
+    valueA = a[2];
+    valueB = b[2];
+    if (valueA > valueB) {
+        return -1;
+      }
+    else if (valueA < valueB) {
+        return 1;
+      }
+    return 0;
+    });
+  
+  var text = "";
+  var arrayInfo = ["Name:", "Price:", "1H %-change:"]
+  for (x in arrayMain) {
+      text += `${arrayInfo[0]} ${arrayMain[x][0]}\n${arrayInfo[1]} ${arrayMain[x][1]}\n${arrayInfo[2]} ${arrayMain[x][2]}\n`
+  }
+
+  return text
 }
 
 async function isCurrencySupported(sCurrency) {
